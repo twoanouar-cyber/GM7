@@ -17,7 +17,11 @@ interface GymSettings {
     backup_frequency?: string;
     theme_color?: string;
     auto_backup_schedule?: 'manual' | 'daily' | 'weekly' | 'monthly';
+    auto_backup_time?: string;
     drive_connected?: boolean;
+    last_backup_date?: string;
+    last_drive_backup_date?: string;
+    drive_connection_status?: 'connected' | 'disconnected' | 'error';
     drive_credentials?: {
       client_id: string;
       client_secret: string;
@@ -43,6 +47,7 @@ const SettingsPage: React.FC = () => {
     receipt_footer: '',
     theme_color: '#667eea',
     auto_backup_schedule: 'manual' as 'manual' | 'daily' | 'weekly' | 'monthly',
+    auto_backup_time: '02:00',
     drive_connected: false,
   });
 
@@ -83,6 +88,7 @@ const SettingsPage: React.FC = () => {
           receipt_footer: settings.receipt_footer || '',
           theme_color: settings.theme_color || '#667eea',
           auto_backup_schedule: settings.auto_backup_schedule || 'manual',
+          auto_backup_time: settings.auto_backup_time || '02:00',
           drive_connected: !!settings.drive_credentials,
         });
         setDriveCredentials(settings.drive_credentials || null);
@@ -107,7 +113,11 @@ const SettingsPage: React.FC = () => {
         receipt_footer: formData.receipt_footer,
         theme_color: formData.theme_color,
         auto_backup_schedule: formData.auto_backup_schedule,
+        auto_backup_time: formData.auto_backup_time,
         drive_connected: !!credentialsToSave,
+        last_backup_date: gymSettings?.settings.last_backup_date,
+        last_drive_backup_date: gymSettings?.settings.last_drive_backup_date,
+        drive_connection_status: credentialsToSave ? 'connected' : 'disconnected',
         drive_credentials: credentialsToSave,
       };
 
@@ -140,6 +150,17 @@ const SettingsPage: React.FC = () => {
       if (result.error) {
         setBackupStatus({ type: 'error', message: `فشل النسخ الاحتياطي: ${result.error}` });
       } else {
+        // تحديث تاريخ آخر نسخة احتياطية محلية
+        const currentSettings = { ...gymSettings?.settings };
+        currentSettings.last_backup_date = new Date().toISOString();
+        await window.electronAPI.run(`
+          UPDATE gyms 
+          SET settings = ?
+          WHERE id = ?
+        `, [JSON.stringify(currentSettings), gymId]);
+        
+        await loadGymSettings(); // إعادة تحميل الإعدادات
+        
         setBackupStatus({ 
           type: 'success', 
           message: `تم إنشاء نسخة احتياطية بنجاح في: ${result.path}` 
@@ -359,6 +380,18 @@ const SettingsPage: React.FC = () => {
       if (result.error) {
         setBackupStatus({ type: 'error', message: `فشل النسخ الاحتياطي: ${result.error}` });
       } else {
+        // تحديث تاريخ آخر نسخة احتياطية على Google Drive
+        const currentSettings = { ...gymSettings?.settings };
+        currentSettings.last_drive_backup_date = new Date().toISOString();
+        currentSettings.drive_connection_status = 'connected';
+        await window.electronAPI.run(`
+          UPDATE gyms 
+          SET settings = ?
+          WHERE id = ?
+        `, [JSON.stringify(currentSettings), gymId]);
+        
+        await loadGymSettings(); // إعادة تحميل الإعدادات
+        
         setBackupStatus({ 
           type: 'success', 
           message: `تم إنشاء نسخة احتياطية ورفعها إلى Google Drive بنجاح.` 
@@ -683,6 +716,43 @@ const SettingsPage: React.FC = () => {
                 {/* Google Drive Integration Section - UPDATED */}
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
                   <h3 className="font-semibold text-blue-800 arabic-text">ربط Google Drive</h3>
+                  
+                  {/* Drive Connection Status */}
+                  <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                    <div>
+                      <p className="font-medium arabic-text">حالة الاتصال</p>
+                      <p className="text-sm text-gray-600">
+                        {formData.drive_connected ? (
+                          <span className="text-green-600">✅ متصل بـ Google Drive</span>
+                        ) : (
+                          <span className="text-red-600">❌ غير متصل</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Last Backup Dates */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-3 bg-white rounded-lg border">
+                      <p className="font-medium text-sm arabic-text">آخر نسخة محلية</p>
+                      <p className="text-xs text-gray-600">
+                        {gymSettings?.settings.last_backup_date ? 
+                          new Date(gymSettings.settings.last_backup_date).toLocaleString('ar-DZ') : 
+                          'لم يتم إنشاء نسخة بعد'
+                        }
+                      </p>
+                    </div>
+                    <div className="p-3 bg-white rounded-lg border">
+                      <p className="font-medium text-sm arabic-text">آخر نسخة على Drive</p>
+                      <p className="text-xs text-gray-600">
+                        {gymSettings?.settings.last_drive_backup_date ? 
+                          new Date(gymSettings.settings.last_drive_backup_date).toLocaleString('ar-DZ') : 
+                          'لم يتم الرفع بعد'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  
                   <p className="text-sm text-gray-600 arabic-text">
                     اربط حسابك في Google Drive لإنشاء نسخ احتياطية سحابية.
                   </p>
@@ -751,7 +821,7 @@ const SettingsPage: React.FC = () => {
                 {/* Auto Backup Scheduling Section */}
                 <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg space-y-4">
                   <h3 className="font-semibold text-purple-800 arabic-text">النسخ الاحتياطي التلقائي</h3>
-                  <div className="flex items-end space-x-reverse space-x-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex-1">
                       <label className="form-label-ar arabic-text">جدولة النسخ التلقائي</label>
                       <select
@@ -766,17 +836,31 @@ const SettingsPage: React.FC = () => {
                       </select>
                     </div>
                     
+                    <div className="flex-1">
+                      <label className="form-label-ar arabic-text">وقت النسخ الاحتياطي</label>
+                      <input
+                        type="time"
+                        value={formData.auto_backup_time}
+                        onChange={(e) => setFormData({ ...formData, auto_backup_time: e.target.value })}
+                        className="form-input-ar"
+                        disabled={formData.auto_backup_schedule === 'manual'}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end">
                     <button
                       onClick={handleSetupAutoBackup}
                       disabled={isBackupLoading || formData.auto_backup_schedule === gymSettings?.settings.auto_backup_schedule}
-                      className="flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-md transition-colors disabled:bg-gray-400 h-[42px] arabic-text"
+                      className="flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-md transition-colors disabled:bg-gray-400 arabic-text"
                     >
                       <Clock className="ml-2" size={18} />
                       تطبيق الجدولة
                     </button>
                   </div>
+                  
                   <p className="text-sm text-gray-600 arabic-text">
-                    النسخ الاحتياطي التلقائي سيتم تنفيذه في الساعة 2:00 صباحًا بتوقيت الجهاز.
+                    النسخ الاحتياطي التلقائي سيتم تنفيذه في الساعة {formData.auto_backup_time} بتوقيت الجهاز.
                   </p>
                 </div>
                 

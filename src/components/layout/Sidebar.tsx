@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   LayoutDashboard,
   Package,
@@ -15,66 +16,82 @@ import {
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
+  const { user } = useAuth();
 
   const menuItems = [
     {
       path: '/dashboard',
       icon: LayoutDashboard,
       label: 'لوحة التحكم',
-      exact: true
+      exact: true,
+      allowedRoles: ['admin', 'employee']
     },
     {
       path: '/dashboard/categories',
       icon: Tag,
-      label: 'الفئات'
+      label: 'الفئات',
+      allowedRoles: ['admin']
     },
     {
       path: '/dashboard/products',
       icon: Package,
-      label: 'المنتجات'
+      label: 'المنتجات',
+      allowedRoles: ['admin']
     },
     {
       path: '/dashboard/purchases',
       icon: ShoppingCart,
-      label: 'المشتريات'
+      label: 'المشتريات',
+      allowedRoles: ['admin']
     },
     {
       path: '/dashboard/sales',
       icon: CreditCard,
-      label: 'المبيعات'
+      label: 'المبيعات',
+      allowedRoles: ['admin', 'employee']
     },
     {
       path: '/dashboard/subscriptions',
       icon: FileText,
-      label: 'الاشتراكات'
+      label: 'الاشتراكات',
+      allowedRoles: ['admin', 'employee']
     },
     {
       path: '/dashboard/subscribers',
       icon: Users,
-      label: 'المشتركين'
+      label: 'المشتركين',
+      allowedRoles: ['admin', 'employee']
     },
     {
       path: '/dashboard/internal-sales',
       icon: UserPlus,
-      label: 'القائمة البيضاء'
+      label: 'القائمة البيضاء',
+      allowedRoles: ['admin', 'employee']
     },
     {
       path: '/dashboard/customers',
       icon: UserCheck,
-      label: 'الزبائن'
+      label: 'الزبائن',
+      allowedRoles: ['admin', 'employee']
     },
     {
       path: '/dashboard/users',
       icon: Users,
-      label: 'المستخدمين'
+      label: 'المستخدمين',
+      allowedRoles: ['admin']
     },
     {
       path: '/dashboard/settings',
       icon: Settings,
-      label: 'الإعدادات'
+      label: 'الإعدادات',
+      allowedRoles: ['admin']
     }
   ];
 
+  // فلترة العناصر حسب صلاحيات المستخدم
+  const filteredMenuItems = menuItems.filter(item => 
+    item.allowedRoles.includes(user?.role || 'employee')
+  );
   return (
     // الخلفية الرئيسية للشريط الجانبي
     <aside className="w-64 bg-gray-50 shadow-lg border-l border-gray-200">
@@ -94,7 +111,7 @@ const Sidebar: React.FC = () => {
       <div className="bg-white mx-4 p-2 rounded-lg shadow-inner">
         {/* قسم التنقل مع تباعد بين العناصر */}
         <nav className="space-y-1">
-          {menuItems.map((item) => {
+          {filteredMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.exact 
               ? location.pathname === item.path

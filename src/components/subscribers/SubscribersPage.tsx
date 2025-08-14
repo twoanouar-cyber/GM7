@@ -49,14 +49,19 @@ const SubscribersPage: React.FC = () => {
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && !showModal) {
+      // إزالة مستمع Enter من هنا لأنه سيتم التعامل معه في App.tsx
+    };
+
+    // إضافة مستمع للحدث المخصص
+    const handleOpenAddSubscriber = () => {
+      if (!showModal) {
         e.preventDefault();
         openAddModal();
       }
     };
 
-    document.addEventListener('keydown', handleKeyPress);
-    return () => document.removeEventListener('keydown', handleKeyPress);
+    window.addEventListener('openAddSubscriber', handleOpenAddSubscriber);
+    return () => window.removeEventListener('openAddSubscriber', handleOpenAddSubscriber);
   }, [showModal]);
 
   useEffect(() => {

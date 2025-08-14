@@ -138,23 +138,24 @@ const listGoogleDriveFiles = async (driveCredentials) => {
 };
 
 // جدولة النسخ الاحتياطي التلقائي
-const scheduleAutoBackup = (schedule, driveCredentials = null) => {
+const scheduleAutoBackup = (schedule, driveCredentials = null, backupTime = '02:00') => {
   if (backupSchedule) {
     backupSchedule.stop();
     backupSchedule = null;
   }
   
   if (schedule && schedule !== 'manual') {
+    const [hour, minute] = backupTime.split(':');
     let cronPattern;
     switch (schedule) {
       case 'daily':
-        cronPattern = '0 2 * * *'; // كل يوم الساعة 2:00 صباحاً
+        cronPattern = `${minute} ${hour} * * *`; // كل يوم في الوقت المحدد
         break;
       case 'weekly':
-        cronPattern = '0 2 * * 0'; // كل يوم أحد الساعة 2:00 صباحاً
+        cronPattern = `${minute} ${hour} * * 0`; // كل يوم أحد في الوقت المحدد
         break;
       case 'monthly':
-        cronPattern = '0 2 1 * *'; // في اليوم الأول من كل شهر الساعة 2:00 صباحاً
+        cronPattern = `${minute} ${hour} 1 * *`; // في اليوم الأول من كل شهر في الوقت المحدد
         break;
       default:
         return;
@@ -815,12 +816,16 @@ ipcMain.handle('setup-auto-backup', async (event, schedule, driveCredentials = n
 // IPC handler for Google Drive authentication
 ipcMain.handle('google-drive-auth', async () => {
   try {
+    // قراءة بيانات الاعتماد من متغيرات البيئة
     const credentials = {
-      client_id: 'معلومات حساسة الى env',
-      client_secret: 'معلومات حساسة الى env',
-      redirect_uri: 'معلومات حساسة الى env'
+      client_id: process.env.GOOGLE_DRIVE_CLIENT_ID || '',
+      client_secret: process.env.GOOGLE_DRIVE_CLIENT_SECRET || '',
+      redirect_uri: process.env.GOOGLE_DRIVE_REDIRECT_URI || 'urn:ietf:wg:oauth:2.0:oob'
     };
 
+    if (!credentials.client_id || !credentials.client_secret) {
+      return { error: 'بيانات اعتماد Google Drive غير مكتملة. يرجى التحقق من ملف .env' };
+    }
     const auth = new google.auth.OAuth2(
       credentials.client_id,
       credentials.client_secret,
@@ -845,9 +850,9 @@ ipcMain.handle('google-drive-auth', async () => {
 ipcMain.handle('google-drive-get-token', async (event, code) => {
   try {
     const credentials = {
-      client_id: 'معلومات حساسة الى env',
-      client_secret: 'معلومات حساسة الى env',
-      redirect_uri: 'معلومات حساسة الى env'
+      client_id: process.env.GOOGLE_DRIVE_CLIENT_ID || '',
+      client_secret: process.env.GOOGLE_DRIVE_CLIENT_SECRET || '',
+      redirect_uri: process.env.GOOGLE_DRIVE_REDIRECT_URI || 'urn:ietf:wg:oauth:2.0:oob'
     };
     
     const auth = new google.auth.OAuth2(

@@ -49,10 +49,11 @@ function AppContent() {
         setShowQuickSale(true);
       }
       
-      // اختصار زر Enter لفتح صفحة إضافة مشترك
+      // اختصار زر Enter لفتح نافذة إضافة مشترك مباشرة
       else if (event.code === 'Enter' && user && !showQuickSale) {
         event.preventDefault();
-        navigate('/dashboard/subscribers');
+        // إرسال حدث مخصص لفتح نافذة إضافة المشترك
+        window.dispatchEvent(new CustomEvent('openAddSubscriber'));
       }
     };
 

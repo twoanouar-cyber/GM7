@@ -351,36 +351,26 @@ const ProductsPage: React.FC = () => {
             </h2>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Barcode Scanner Input */}
-                <div className="form-group-ar">
-                  <label className="form-label-ar arabic-text">
-                    مسح الباركود
-                  </label>
-                  <input
-                    id="product-barcode-input"
-                    type="text"
-                    value={formData.barcodeInput}
-                    onChange={(e) => setFormData({ ...formData, barcodeInput: e.target.value })}
-                    className="form-input-ar text-center text-lg font-mono"
-                    placeholder="امسح الباركود هنا..."
-                    autoFocus
-                  />
-                </div>
-
-                <div className="form-group-ar">
-                  <label className="form-label-ar arabic-text">
-                    الباركود
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.barcode}
-                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                    className="form-input-ar"
-                    placeholder="سيتم إنشاؤه من المسح أو يدوياً"
-                    readOnly={!!formData.barcodeInput}
-                  />
-                </div>
+              <div className="form-group-ar">
+                <label className="form-label-ar arabic-text">
+                  الباركود
+                </label>
+                <input
+                  id="product-barcode-input"
+                  type="text"
+                  value={formData.barcodeInput || formData.barcode}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({ 
+                      ...formData, 
+                      barcodeInput: value,
+                      barcode: value
+                    });
+                  }}
+                  className="form-input-ar text-center text-lg font-mono"
+                  placeholder="امسح الباركود أو اكتبه هنا..."
+                  autoFocus
+                />
               </div>
 
               <div className="form-group-ar">

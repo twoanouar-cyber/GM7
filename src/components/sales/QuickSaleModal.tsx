@@ -172,10 +172,12 @@ const QuickSaleModal: React.FC<QuickSaleModalProps> = ({ isOpen, onClose }) => {
     
     if (existingItemIndex >= 0) {
       // Increase quantity if product already exists
-      const newItems = [...items];
-      newItems[existingItemIndex].quantity += 1;
-      newItems[existingItemIndex].total_price = newItems[existingItemIndex].quantity * newItems[existingItemIndex].unit_price;
-      setItems(newItems);
+      setItems(prevItems => {
+        const newItems = [...prevItems];
+        newItems[existingItemIndex].quantity += 1;
+        newItems[existingItemIndex].total_price = newItems[existingItemIndex].quantity * newItems[existingItemIndex].unit_price;
+        return newItems;
+      });
     } else {
       // Add new item
       const newItem: QuickSaleItem = {
@@ -185,7 +187,7 @@ const QuickSaleModal: React.FC<QuickSaleModalProps> = ({ isOpen, onClose }) => {
         unit_price: product.sale_price,
         total_price: product.sale_price
       };
-      setItems([...items, newItem]);
+      setItems(prevItems => [...prevItems, newItem]);
     }
   };
 

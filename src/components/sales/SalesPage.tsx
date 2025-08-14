@@ -94,10 +94,12 @@ const SalesPage: React.FC = () => {
         
         if (existingItemIndex >= 0) {
           // Increase quantity if product already exists
-          const newItems = [...formData.items];
-          newItems[existingItemIndex].quantity += 1;
-          newItems[existingItemIndex].total_price = newItems[existingItemIndex].quantity * newItems[existingItemIndex].unit_price;
-          setFormData({ ...formData, items: newItems });
+          setFormData(prevData => {
+            const newItems = [...prevData.items];
+            newItems[existingItemIndex].quantity += 1;
+            newItems[existingItemIndex].total_price = newItems[existingItemIndex].quantity * newItems[existingItemIndex].unit_price;
+            return { ...prevData, items: newItems };
+          });
         } else {
           // Add new item
           const newItem = {
@@ -107,7 +109,7 @@ const SalesPage: React.FC = () => {
             unit_price: product.sale_price,
             total_price: product.sale_price
           };
-          setFormData({ ...formData, items: [...formData.items, newItem] });
+          setFormData(prevData => ({ ...prevData, items: [...prevData.items, newItem] }));
         }
         
         setBarcodeInput(''); // Clear barcode input
@@ -436,6 +438,12 @@ const SalesPage: React.FC = () => {
                     </td>
                     <td>
                       {new Date(invoice.created_at).toLocaleDateString('ar-DZ')}
+                      <div className="text-xs text-gray-500 mt-1">
+                        {new Date(invoice.created_at).toLocaleTimeString('ar-DZ', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
                     </td>
                     <td>
                       <div className="flex items-center space-x-reverse space-x-2">
@@ -469,150 +477,254 @@ const SalesPage: React.FC = () => {
               إنشاء فاتورة جديدة
             </h2>
             
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Customer Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="form-group-ar">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={formData.is_single_session}
-                      onChange={(e) => setFormData({ ...formData, is_single_session: e.target.checked })}
-                      className="ml-2"
-                    />
-                    <span className="arabic-text">حصة (غير مشترك)</span>
-                  </label>
-                </div>
-
-                {formData.is_single_session && (
-                  <div className="form-group-ar">
-                    <label className="form-label-ar arabic-text">
-                      سعر الحصة (دج)
+            <div className="flex h-full max-h-[70vh]">
+              {/* Left Panel - Products and Items */}
+              <div className="flex-1 p-6 overflow-y-auto">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Session Type Toggle */}
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.is_single_session}
+                        onChange={(e) => setFormData({ ...formData, is_single_session: e.target.checked })}
+                        className="ml-2"
+                      />
+                      <span className="arabic-text font-medium">حصة (غير مشترك)</span>
                     </label>
+                    {formData.is_single_session && (
+                      <div className="mt-3">
+                        <label className="form-label-ar arabic-text">سعر الحصة (دج)</label>
+                        <input
+                          type="number"
+                          value={formData.single_session_price}
+                          onChange={(e) => setFormData({ ...formData, single_session_price: e.target.value })}
+                          className="form-input-ar"
+                          min="0"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {/* Barcode Scanner */}
+                  <div className="mb-6">
+                    <div className="flex items-center mb-3">
+                      <Scan className="w-5 h-5 text-blue-600 ml-2" />
+                      <h3 className="text-lg font-semibold arabic-text">مسح الباركود</h3>
+                    </div>
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.single_session_price}
-                      onChange={(e) => setFormData({ ...formData, single_session_price: e.target.value })}
-                      className="form-input-ar"
-                      placeholder="200"
+                      type="text"
+                      value={barcodeInput}
+                      onChange={(e) => setBarcodeInput(e.target.value)}
+                      className="form-input-ar text-center text-lg font-mono"
+                      placeholder="امسح الباركود أو اكتبه هنا..."
+                      autoFocus
                     />
                   </div>
-                )}
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="form-group-ar">
-                  <label className="form-label-ar arabic-text">
-                    اسم الزبون
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.customer_name}
-                    onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
-                    className="form-input-ar"
-                    placeholder="اسم الزبون (اختياري)"
-                  />
-                </div>
-
-                <div className="form-group-ar">
-                  <label className="form-label-ar arabic-text">
-                    رقم الهاتف
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.customer_phone}
-                    onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
-                    className="form-input-ar"
-                    placeholder="رقم الهاتف (اختياري)"
-                  />
-                </div>
-              </div>
-
-              {/* Manual Product Selection */}
-              {!formData.is_single_session && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3 arabic-text">اختيار المنتجات يدوياً</h3>
-                  <div className="max-h-40 overflow-y-auto bg-gray-50 rounded-lg p-3">
-                    <div className="grid grid-cols-1 gap-2">
-                      {products.map((product) => (
+                  {/* Manual Product Selection */}
+                  {!formData.is_single_session && (
+                    <div className="mb-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-semibold arabic-text">المنتجات</h3>
                         <button
-                          key={product.id}
                           type="button"
-                          onClick={() => {
-                            const newItem = {
-                              product_id: product.id,
-                              product_name: product.name,
-                              quantity: 1,
-                              unit_price: product.sale_price,
-                              total_price: product.sale_price
-                            };
-                            setFormData({ ...formData, items: [...formData.items, newItem] });
-                          }}
-                          className="flex items-center justify-between p-2 bg-white rounded border hover:bg-blue-50 transition-colors text-right"
+                          onClick={() => setShowProductSelector(true)}
+                          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
-                          <div className="flex-1">
-                            <div className="font-medium arabic-text">{product.name}</div>
-                            <div className="text-sm text-gray-600">
-                              {formatCurrency(product.sale_price)}
-                            </div>
-                          </div>
-                          <div className="text-blue-600 font-bold">+</div>
+                          <ShoppingCart className="w-4 h-4 ml-2" />
+                          <span className="arabic-text">إضافة منتج</span>
                         </button>
-                      ))}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              )}
+                  )}
 
-              {/* Items */}
-              {!formData.is_single_session && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold arabic-text">المنتجات</h3>
-                  <div className="flex items-center space-x-reverse space-x-2">
-                    <div className="relative">
-                      <Scan className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  {/* Items List */}
+                  {!formData.is_single_session && (
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold mb-3 arabic-text">المنتجات</h3>
+                      {formData.items.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <Scan className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                          <p className="arabic-text">امسح باركود المنتج لإضافته</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {formData.items.map((item, index) => (
+                            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <div className="flex-1">
+                                <h4 className="font-medium arabic-text">{item.product_name}</h4>
+                                <p className="text-sm text-gray-600">{formatCurrency(item.unit_price)} × {item.quantity}</p>
+                              </div>
+                              <div className="flex items-center space-x-reverse space-x-2">
+                                <button
+                                  type="button"
+                                  onClick={() => updateItem(index, 'quantity', item.quantity - 1)}
+                                  className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                >
+                                  <Minus className="w-4 h-4" />
+                                </button>
+                                <span className="w-8 text-center font-medium">{item.quantity}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => updateItem(index, 'quantity', item.quantity + 1)}
+                                  className="p-1 text-green-600 hover:bg-green-50 rounded"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                </button>
+                                <div className="w-20 text-left font-bold">
+                                  {formatCurrency(item.total_price)}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeItem(index)}
+                                  className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </form>
+              </div>
+
+              {/* Right Panel - Customer and Payment */}
+              <div className="w-96 bg-gray-50 p-6 overflow-y-auto">
+                {/* Customer Info */}
+                <div className="mb-6">
+                  <div className="flex items-center mb-3">
+                    <User className="w-5 h-5 text-blue-600 ml-2" />
+                    <h3 className="text-lg font-semibold arabic-text">الزبون</h3>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="form-group-ar">
+                      <label className="form-label-ar arabic-text">
+                        اسم الزبون
+                      </label>
                       <input
                         type="text"
-                        value={barcodeInput}
-                        onChange={(e) => setBarcodeInput(e.target.value)}
-                        className="form-input-ar pr-10"
-                        placeholder="مسح الباركود..."
-                        style={{ width: '200px' }}
+                        value={formData.customer_name}
+                        onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                        className="form-input-ar"
+                        placeholder="اسم الزبون (اختياري)"
                       />
                     </div>
-                    <button
-                      type="button"
-                      onClick={addItem}
-                      className="btn-secondary-ar arabic-text flex items-center"
-                    >
-                      <Plus className="w-4 h-4 ml-2" />
-                      إضافة منتج
-                    </button>
+
+                    <div className="form-group-ar">
+                      <label className="form-label-ar arabic-text">
+                        رقم الهاتف
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.customer_phone}
+                        onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
+                        className="form-input-ar"
+                        placeholder="رقم الهاتف (اختياري)"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  {formData.items.map((item, index) => (
-                    <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 bg-gray-50 rounded-lg">
+                {/* Payment Details */}
+                <div className="mb-6">
+                  <div className="flex items-center mb-3">
+                    <Calculator className="w-5 h-5 text-blue-600 ml-2" />
+                    <h3 className="text-lg font-semibold arabic-text">تفاصيل الدفع</h3>
+                  </div>
+
+                  <div className="space-y-3">
+                    {!formData.is_single_session && (
                       <div>
-                        <label className="form-label-ar arabic-text">المنتج</label>
-                        <select
-                          value={item.product_id}
-                          onChange={(e) => updateItem(index, 'product_id', e.target.value)}
-                          className="form-select-ar"
-                          required
-                        >
-                          <option value="">اختر المنتج</option>
-                          {products.map((product) => (
-                            <option key={product.id} value={product.id}>
-                              {product.name} - {formatCurrency(product.sale_price)}
-                            </option>
-                          ))}
-                        </select>
+                        <label className="form-label-ar arabic-text">الخصم (دج)</label>
+                        <input
+                          type="number"
+                          value={formData.discount}
+                          onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
+                          className="form-input-ar"
+                          min="0"
+                        />
                       </div>
+                    )}
+
+                    <div>
+                      <label className="form-label-ar arabic-text">المبلغ المدفوع (دج)</label>
+                      <input
+                        type="number"
+                        value={formData.paid_amount}
+                        onChange={(e) => setFormData({ ...formData, paid_amount: e.target.value })}
+                        className="form-input-ar"
+                        min="0"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={formData.is_credit}
+                          onChange={(e) => setFormData({ ...formData, is_credit: e.target.checked })}
+                          className="ml-2"
+                        />
+                        <span className="arabic-text">دفع آجل</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Totals */}
+                <div className="mb-6 p-4 bg-white rounded-lg border">
+                  {/* Digital Display for Total */}
+                  <div className="text-center mb-4 p-4 bg-gradient-to-r from-green-500 to-blue-600 rounded-lg text-white">
+                    <div className="text-sm arabic-text opacity-90">المجموع الكلي</div>
+                    <div className="text-3xl font-bold font-mono">
+                      {formatCurrency(formData.is_single_session ? parseFloat(formData.single_session_price) : calculateTotal())}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="arabic-text">المجموع الفرعي:</span>
+                      <span>{formatCurrency(formData.is_single_session ? parseFloat(formData.single_session_price) : calculateSubtotal())}</span>
+                    </div>
+                    {!formData.is_single_session && parseFloat(formData.discount) > 0 && (
+                      <div className="flex justify-between text-red-600">
+                        <span className="arabic-text">الخصم:</span>
+                        <span>-{formatCurrency(parseFloat(formData.discount))}</span>
+                      </div>
+                    )}
+                    {calculateTotal() > parseFloat(formData.paid_amount) && (
+                      <div className="flex justify-between text-red-600 font-medium">
+                        <span className="arabic-text">المبلغ المتبقي:</span>
+                        <span>{formatCurrency(calculateTotal() - parseFloat(formData.paid_amount))}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-3">
+                  <button
+                    type="submit"
+                    disabled={!formData.is_single_session && formData.items.length === 0}
+                    className="w-full btn-primary-ar arabic-text py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleSubmit}
+                  >
+                    إنشاء الفاتورة
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="w-full btn-secondary-ar arabic-text py-2"
+                  >
+                    مسح الكل
+                  </button>
+                </div>
+              </div>
+            </div>
 
                       <div>
                         <label className="form-label-ar arabic-text">الكمية</label>
