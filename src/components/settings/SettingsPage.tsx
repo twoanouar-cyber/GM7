@@ -410,6 +410,7 @@ const SettingsPage: React.FC = () => {
       const updatedSettings = {
         ...gymSettings?.settings,
         auto_backup_schedule: formData.auto_backup_schedule,
+        auto_backup_time: formData.auto_backup_time,
         drive_credentials: driveCredentials
       };
       await window.electronAPI.run(`
@@ -418,12 +419,12 @@ const SettingsPage: React.FC = () => {
         WHERE id = ?
       `, [JSON.stringify(updatedSettings), gymId]);
 
-      const result = await window.electronAPI.setupAutoBackup(formData.auto_backup_schedule, driveCredentials);
+      const result = await window.electronAPI.setupAutoBackup(formData.auto_backup_schedule, driveCredentials, formData.auto_backup_time);
       
       if (result.success) {
         setBackupStatus({ 
           type: 'success', 
-          message: `تم إعداد النسخ الاحتياطي التلقائي: ${formData.auto_backup_schedule}` 
+          message: `تم إعداد النسخ الاحتياطي التلقائي: ${formData.auto_backup_schedule} في الساعة ${formData.auto_backup_time}`
         });
       } else {
         setBackupStatus({ type: 'error', message: result.error || 'فشل في إعداد النسخ التلقائي' });

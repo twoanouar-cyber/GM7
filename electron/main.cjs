@@ -803,9 +803,9 @@ ipcMain.handle('choose-backup-path', async () => {
   }
 });
 
-ipcMain.handle('setup-auto-backup', async (event, schedule, driveCredentials = null) => {
+ipcMain.handle('setup-auto-backup', async (event, schedule, driveCredentials, backupTime) => {
   try {
-    scheduleAutoBackup(schedule, driveCredentials);
+    scheduleAutoBackup(schedule, driveCredentials, backupTime);
     return { success: true };
   } catch (error) {
     console.error('Setup auto backup error:', error);
